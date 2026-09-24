@@ -1,5 +1,8 @@
 from paciente import Paciente
-pacientes:list[Paciente]=[]
+pacientes:list[Paciente]=[
+        Paciente("11.111.111-1","Juan Perez",30,"Fonasa"),
+        Paciente("22.222.222-2","Catalina Ruiz",27,"Fonasa")
+]
 
 def leer_numero(mensaje:str)->int:
     while True:
@@ -16,7 +19,7 @@ def menu():
     print("3.- eliminar paciente")
     print("4.- mostrar un paciente")
     print("5.- mostar todos los pacientes")
-    print("6.- salir")
+    print("0.- salir")
     op=leer_numero("ingrese una opcion: ")
     return op 
 
@@ -46,6 +49,7 @@ def agregar_paciente()-> None:
 
 
 def main():
+   
    while True:
     opcion=menu()
     if opcion==1:
