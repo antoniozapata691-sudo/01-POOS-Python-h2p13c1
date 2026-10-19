@@ -1,153 +1,204 @@
-from paciente import Paciente
-pacientes:list[Paciente]=[
-        Paciente("11.111.111-1","Juan Perez",30,"Fonasa"),
-        Paciente("22.222.222-2","Maria Gonzalez",25,"Isapre")
-    ]
+from empleado import Empleado
+from conexion_bd import BaseDatos
 
-def leer_numero(mensaje:str)->int:
+db = BaseDatos()
+
+def leer_numero(mensaje: str) -> int:
     while True:
         try:
-            numero=int(input(mensaje))
+            numero = int(input(mensaje))
             return numero
         except ValueError:
-            print("Error: Debe ingresar un número entero.")
+            print("Error: Debe ingresar un número entero válido.")
+
+def leer_flotante(mensaje: str) -> float:
+    while True:
+        try:
+            numero = float(input(mensaje))
+            return numero
+        except ValueError:
+            print("Error: Debe ingresar un número válido.")
 
 def menu():
-    print("="*20)
-    print("Menú Clínica")
-    print("="*20)
-    print("1.- Agregar paciente")
-    print("2.- Editar paciente")
-    print("3.- Eliminar paciente")
-    print("4.- Mostrar un paciente")
-    print("5.- Mostrar todos los pacientes")
+    print("=" * 30)
+    print(" EcoTech Solutions - Gestión")
+    print("=" * 30)
+    print("1.- Registrar empleado")
+    print("2.- Buscar empleado por RUT")
+    print("3.- Actualizar empleado")
+    print("4.- Eliminar empleado")
+    print("5.- Mostrar todos los empleados")
     print("0.- Salir")
-    op=leer_numero("Ingrese una opción: ")
-    print("="*20)
+    op = leer_numero("Ingrese una opción: ")
+    print("=" * 30)
     return op
 
-def agregar_paciente()-> None:
-    rut=input("Ingrese RUT del paciente: ")
-    nombre=input("Ingrese nombre del paciente: ")
-    edad=leer_numero("Ingrese edad del paciente: ")
-    print("Tipo de previsión del paciente: ")
-    print("1.- Fonasa")
-    print("2.- Isapre")
-    print("3.- Particular")
-    print("4.- Otro ")
-    op=leer_numero("Seleccione una previsión del paciente: ")
-    if op==1:
-        prevision="Fonasa"
-    elif op==2:
-        prevision="Isapre"
-    elif op==3:
-        prevision="Particular"
-    elif op==4:
-        prevision="Otro"
+def agregar_empleado():
+    rut = input("Ingrese RUT del empleado: ")
+    nombre = input("Ingrese nombre del empleado: ")
+    edad = leer_numero("Ingrese edad del empleado: ")
+    
+    print("Seleccione el cargo del empleado:")
+    print("1.- Desarrollador")
+    print("2.- Analista")
+    print("3.- Jefe de Proyecto")
+    print("4.- Soporte")
+    print("5.- Otro")
+    op_cargo = leer_numero("Seleccione opción: ")
+    
+    cargos = {1: "Desarrollador", 2: "Analista", 3: "Jefe de Proyecto", 4: "Soporte", 5: "Otro"}
+    cargo = cargos.get(op_cargo, "Otro")
+    
+    sueldo = leer_flotante("Ingrese sueldo del empleado: ")
 
-    paciente=Paciente(rut,nombre,edad,prevision)
-    pacientes.append(paciente)  
-    print("Paciente agregado exitosamente.")
-    print(f"Total de pacientes: {len(pacientes)}")
+    try:
+        emp = Empleado(rut, nombre, edad, cargo, sueldo)
+    except (ValueError, TypeError) as e:
+        print(f"Error de validación al crear el empleado: {e}")
+        return
 
-def imprimir_pacientes()->None:
-    if len(pacientes)==0:
-        print("No hay pacientes")
-    else:
-        for paciente in pacientes:
-            print(paciente)
-            print("-"*20)
+    conexion = db.conectar()
+    if conexion:
+        try:
+            cursor = conexion.cursor()
+            cursor.execute("INSERT INTO empleados (rut, nombre, edad, cargo, sueldo) VALUES (?, ?, ?, ?, ?)",
+                           (emp.rut, emp.nombre, emp.edad, emp.cargo, emp.sueldo))
+            conexion.commit()
+            print("¡Empleado registrado exitosamente en la base de datos!")
+        except sqlite3.IntegrityError:
+            print("Error: Ya existe un empleado registrado con ese RUT.")
+        except sqlite3.Error as e:
+            print(f"Error en la base de datos: {e}")
+        finally:
+            conexion.close()
 
-def buscar_paciente()->Paciente:
-    rut=input("Ingrese RUT del paciente: ")
-    for p in pacientes:
-        if p.rut==rut:
-            return p
+def buscar_empleado_db():
+    rut = input("Ingrese RUT del empleado a buscar: ")
+    conexion = db.conectar()
+    if conexion:
+        try:
+            cursor = conexion.cursor()
+            cursor.execute("SELECT rut, nombre, edad, cargo, sueldo FROM empleados WHERE rut = ?", (rut,))
+            resultado = cursor.fetchone()
+            if resultado:
+                emp = Empleado(resultado[0], resultado[1], resultado[2], resultado[3], resultado[4])
+                print("-" * 30)
+                print(emp)
+                print("-" * 30)
+                return emp
+            else:
+                print("No se encontró ningún empleado con ese RUT.")
+                return None
+        except sqlite3.Error as e:
+            print(f"Error al consultar la base de datos: {e}")
+        finally:
+            conexion.close()
     return None
 
-def imprimir_paciente()->None:
-    paciente=buscar_paciente()
-    if paciente:
-        print(paciente)
-    else:
-        print("No se encontró el paciente.")
-
-def eliminar_paciente()->None:
-    paciente=buscar_paciente()
-    if paciente:
-        pacientes.remove(paciente)
-        print("Paciente eliminado")
-    else:
-        print("No se encontró el paciente.")
-
-def editar_paciente()->None:
-    paciente=buscar_paciente()
-    if paciente:
-        print(paciente)
-        print("Menú de edición")
-        print("1.- Editar nombre")
-        print("2.- Editar edad")
-        print("3.- Editar previsión")
-        print("0.- Salir")
-        op=leer_numero("Ingrese una opción: ")
-        if op==1:
-            nombre_nuevo=input("Ingrese nuevo nombre: ")
-            paciente.nombre=nombre_nuevo
-            print("Nombre actualizado")
-        elif op==2:
-            edad_nueva=leer_numero("Ingrese nueva edad: ")
-            paciente.edad=edad_nueva
-            print("Edad actualizada")
-        elif op==3:
-            print("Tipos de previsión: ")
-            print("1.- Fonasa")
-            print("2.- Isapre")
-            print("3.- Particular")
-            print("4.- Otro")
-            op=leer_numero("Seleccione una previsión: ")
-            if op==1:
-                paciente.prevision="Fonasa"
-                print("Previsión actualizada")
-            elif op==2:
-                paciente.prevision="Isapre"
-                print("Previsión actualizada")
-            elif op==3:
-                paciente.prevision="Particular"
-                print("Previsión actualizada")
-            elif op==4:
-                paciente.prevision="Otro"
-                print("Previsión actualizada")
+def imprimir_todos():
+    conexion = db.conectar()
+    if conexion:
+        try:
+            cursor = conexion.cursor()
+            cursor.execute("SELECT rut, nombre, edad, cargo, sueldo FROM empleados")
+            filas = cursor.fetchall()
+            if not filas:
+                print("No hay empleados registrados en el sistema.")
             else:
-                print("Opción inválida")
-    else:
-        print("No se encontró el paciente.")
+                print("--- LISTADO DE EMPLEADOS ---")
+                for fila in filas:
+                    emp = Empleado(fila[0], fila[1], fila[2], fila[3], fila[4])
+                    print(emp)
+                    print("-" * 20)
+        except sqlite3.Error as e:
+            print(f"Error al listar los empleados: {e}")
+        finally:
+            conexion.close()
+
+def eliminar_empleado():
+    rut = input("Ingrese RUT del empleado a eliminar: ")
+    conexion = db.conectar()
+    if conexion:
+        try:
+            cursor = conexion.cursor()
+            cursor.execute("SELECT rut FROM empleados WHERE rut = ?", (rut,))
+            if not cursor.fetchone():
+                print("No se encontró el empleado para eliminar.")
+                return
+            
+            cursor.execute("DELETE FROM empleados WHERE rut = ?", (rut,))
+            conexion.commit()
+            print("Empleado eliminado correctamente de la base de datos.")
+        except sqlite3.Error as e:
+            print(f"Error al eliminar: {e}")
+        finally:
+            conexion.close()
+
+def editar_empleado():
+    rut = input("Ingrese RUT del empleado a editar: ")
+    conexion = db.conectar()
+    if not conexion:
+        return
+    
+    try:
+        cursor = conexion.cursor()
+        cursor.execute("SELECT rut, nombre, edad, cargo, sueldo FROM empleados WHERE rut = ?", (rut,))
+        resultado = cursor.fetchone()
+        if not resultado:
+            print("No se encontró el empleado.")
+            conexion.close()
+            return
+        
+        emp = Empleado(resultado[0], resultado[1], resultado[2], resultado[3], resultado[4])
+        print(emp)
+        print("\nMenú de Edición:")
+        print("1.- Cambiar nombre")
+        print("2.- Cambiar edad")
+        print("3.- Cambiar sueldo")
+        op = leer_numero("Seleccione qué desea editar: ")
+        
+        if op == 1:
+            nuevo_nombre = input("Ingrese nuevo nombre: ")
+            emp.nombre = nuevo_nombre
+            cursor.execute("UPDATE empleados SET nombre = ? WHERE rut = ?", (emp.nombre, rut))
+        elif op == 2:
+            nueva_edad = leer_numero("Ingrese nueva edad: ")
+            emp.edad = nueva_edad
+            cursor.execute("UPDATE empleados SET edad = ? WHERE rut = ?", (emp.edad, rut))
+        elif op == 3:
+            nuevo_sueldo = leer_flotante("Ingrese nuevo sueldo: ")
+            emp.sueldo = nuevo_sueldo
+            cursor.execute("UPDATE empleados SET sueldo = ? WHERE rut = ?", (emp.sueldo, rut))
+        else:
+            print("Opción de edición inválida.")
+            conexion.close()
+            return
+        
+        conexion.commit()
+        print("¡Datos del empleado actualizados con éxito!")
+    except (ValueError, TypeError, sqlite3.Error) as e:
+        print(f"Error al actualizar el registro: {e}")
+    finally:
+        conexion.close()
 
 def main():
-
     while True:
-        opcion=menu()
-        if opcion==1:
-            print("Agregar paciente")
-            agregar_paciente()
-        elif opcion==2:
-            print("Editar paciente")
-            editar_paciente()
-        elif opcion==3:
-            print("Eliminar paciente")
-            eliminar_paciente()
-        elif opcion==4:
-            print("Mostrar un paciente")
-            imprimir_paciente()
-        elif opcion==5:
-            print("Mostrar todos los pacientes")
-            imprimir_pacientes()
-        elif opcion==0:
-            print("Saliendo del programa...")
+        opcion = menu()
+        if opcion == 1:
+            agregar_empleado()
+        elif opcion == 2:
+            buscar_empleado_db()
+        elif opcion == 3:
+            editar_empleado()
+        elif opcion == 4:
+            eliminar_empleado()
+        elif opcion == 5:
+            imprimir_todos()
+        elif opcion == 0:
+            print("Saliendo del sistema de EcoTech Solutions...")
             break
         else:
             print("Opción inválida. Intente nuevamente.")
-    
 
-
-if __name__=="__main__":
+if __name__ == "__main__":
     main()
