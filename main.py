@@ -1,5 +1,6 @@
+import sqlite3
 from empleado import Empleado
-from conexion_bd import BaseDatos
+from Basededatos import BaseDatos
 
 db = BaseDatos()
 
